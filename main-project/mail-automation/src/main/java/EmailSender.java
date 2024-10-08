@@ -16,8 +16,10 @@ import javax.mail.internet.MimeMessage;
 
 public class EmailSender {
 
-    private static String LEADS_JSON_FILE = "test_leads_list.json";
-    private static String EMAIL_HTML_TEMPLATE = "invite_template.html";
+    private static final String LEADS_JSON_FILE = "test_leads_list.json";
+    private static final String EMAIL_HTML_TEMPLATE = "invite_template.html";
+    private static final String SENDER_NAME = "Jesus Lopez";  // Replace with your actual first name and last name
+
 
     public static void main(String[] args) {
         try {
@@ -56,8 +58,9 @@ public class EmailSender {
                 htmlContent = htmlContent.replace("{{name}}", lead.getName());
 
                 // Create MimeMessage object
-                Message message = new MimeMessage(session);
-                message.setFrom(new InternetAddress(username)); // Your email
+                Message message = new MimeMessage(session);// Set the "From" field with your name and email
+                message.setFrom(new InternetAddress(username, SENDER_NAME)); // Your email and full name
+
                 message.setRecipients(
                         Message.RecipientType.TO,
                         InternetAddress.parse(lead.getEmail()) // Lead's email
