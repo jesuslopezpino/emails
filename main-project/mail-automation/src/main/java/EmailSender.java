@@ -1,6 +1,10 @@
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Properties;
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -12,64 +16,88 @@ import javax.mail.internet.MimeMessage;
 
 public class EmailSender {
 
+    private static String LEADS_JSON_FILE = "test_leads_list.json";
+    private static String EMAIL_HTML_TEMPLATE = "invite_template.html";
+
     public static void main(String[] args) {
         try {
-            // Cargar las propiedades desde el classpath usando ClassLoader y Files
+            // Load properties from the config.properties file using ClassLoader
             Properties props = new Properties();
             InputStream input = EmailSender.class.getClassLoader().getResourceAsStream("config.properties");
 
             if (input == null) {
-                System.out.println("Lo siento, no se pudo encontrar el archivo config.properties");
+                System.out.println("Sorry, the config.properties file was not found.");
                 return;
             }
 
-            // Cargar el archivo de propiedades
+            // Load the properties
             props.load(input);
 
-            // Leer las propiedades del archivo config.properties
+            // Read properties from the config file
             final String username = props.getProperty("mail.username");
             final String password = props.getProperty("mail.password");
 
-            // Crear la sesión con autenticación
+            // Create session with authentication
             Session session = Session.getInstance(props, new javax.mail.Authenticator() {
                 protected PasswordAuthentication getPasswordAuthentication() {
                     return new PasswordAuthentication(username, password);
                 }
             });
 
-            // Leer el archivo HTML desde la carpeta de resources
-            String htmlContent = readHtmlFromClasspath("invite_template.html");
+            // Load leads from the test_leads_list.json file
+            List<Lead> leads = loadLeadsFromJson(LEADS_JSON_FILE);
 
-            // Crear un objeto MimeMessage
-            Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress(username)); // Cambia por tu email
-            message.setRecipients(
-                    Message.RecipientType.TO,
-                    InternetAddress.parse("destinatario@example.com") // Cambia por el destinatario
-            );
-            message.setSubject("We Will Build a Free Website for Your Business");
+            // Loop through each lead and send personalized emails
+            for (Lead lead : leads) {
+                // Read the HTML template from the file
+                String htmlContent = readHtmlFromClasspath(EMAIL_HTML_TEMPLATE);
 
-            // Establecer el contenido del mensaje con HTML leído del archivo
-            message.setContent(htmlContent, "text/html");
+                // Replace placeholder with the lead's name
+                htmlContent = htmlContent.replace("{{name}}", lead.getName());
 
-            // Enviar el correo
-            Transport.send(message);
+                // Create MimeMessage object
+                Message message = new MimeMessage(session);
+                message.setFrom(new InternetAddress(username)); // Your email
+                message.setRecipients(
+                        Message.RecipientType.TO,
+                        InternetAddress.parse(lead.getEmail()) // Lead's email
+                );
+                message.setSubject("We Will Build a Free Website for Your Business");
 
-            System.out.println("Correo enviado exitosamente");
+                // Set the content of the email with the personalized HTML content
+                message.setContent(htmlContent, "text/html");
+
+                // Send the email
+                Transport.send(message);
+
+                System.out.println("Email sent to " + lead.getEmail());
+            }
 
         } catch (MessagingException | IOException e) {
+            System.out.println("An error occurred while sending the email:");
             e.printStackTrace();
         }
     }
 
-    // Método para leer el contenido HTML desde el classpath
+    // Method to load leads from the JSON file
+    private static List<Lead> loadLeadsFromJson(String fileName) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        InputStream inputStream = EmailSender.class.getClassLoader().getResourceAsStream(fileName);
+
+        if (inputStream == null) {
+            throw new FileNotFoundException("The file " + fileName + " was not found in the classpath.");
+        }
+
+        // Read and parse the JSON file into a list of Lead objects
+        return objectMapper.readValue(inputStream, new TypeReference<List<Lead>>() {});
+    }
+
+    // Method to read HTML content from a file in the classpath
     private static String readHtmlFromClasspath(String fileName) throws IOException {
-        // Cargar el archivo desde el classpath
         try (InputStream inputStream = EmailSender.class.getClassLoader().getResourceAsStream(fileName)) {
             if (inputStream == null) {
-                throw new FileNotFoundException("No se pudo encontrar el archivo " + fileName);
+                throw new FileNotFoundException("The file " + fileName + " was not found in the classpath.");
             }
-
             return new String(inputStream.readAllBytes(), "UTF-8");
         }
     }
