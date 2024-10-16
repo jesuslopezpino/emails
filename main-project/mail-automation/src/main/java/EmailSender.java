@@ -19,6 +19,8 @@ public class EmailSender {
     private static final String LEADS_JSON_FILE = "test_leads_list.json";
     private static final String EMAIL_HTML_TEMPLATE = "invite_template.html";
     private static final String SENDER_NAME = "Jesus Lopez";  // Replace with your actual first name and last name
+    private static final String EMAIL_SUBJECT = "Let Us Create a Professional Website for Your Business";  // Replace with your actual first name and last name
+
 
 
     public static void main(String[] args) {
@@ -60,12 +62,14 @@ public class EmailSender {
                 // Create MimeMessage object
                 Message message = new MimeMessage(session);// Set the "From" field with your name and email
                 message.setFrom(new InternetAddress(username, SENDER_NAME)); // Your email and full name
+                // Add the List-Unsubscribe header
+                message.addHeader("List-Unsubscribe", "<mailto:" + username +  ">, <https://www.thefreewebsiteteam.com/unsubscribe?email=" + lead.getEmail() + ">");
 
                 message.setRecipients(
                         Message.RecipientType.TO,
                         InternetAddress.parse(lead.getEmail()) // Lead's email
                 );
-                message.setSubject("We Will Build a Free Website for Your Business");
+                message.setSubject(EMAIL_SUBJECT);
 
                 // Set the content of the email with the personalized HTML content
                 message.setContent(htmlContent, "text/html");
